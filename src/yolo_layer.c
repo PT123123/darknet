@@ -89,17 +89,27 @@ box get_yolo_box(float *x, float *biases, int n, int index, int i, int j, int lw
     b.h = exp(x[index + 3*stride]) * biases[2*n+1] / h;
     return b;
 }
-
+#9就是这个函数
 float delta_yolo_box(box truth, float *x, float *biases, int n, int index, int i, int j, int lw, int lh, int w, int h, float *delta, float scale, int stride)
 {
     box pred = get_yolo_box(x, biases, n, index, i, j, lw, lh, w, h, stride);
     float iou = box_iou(pred, truth);
-
+    #10iou就是在上面这里被计算的，box_iou函数，计算pred和truth
     float tx = (truth.x*lw - i);
     float ty = (truth.y*lh - j);
     float tw = log(truth.w*w / biases[2*n]);
     float th = log(truth.h*h / biases[2*n + 1]);
-
+    #11关注上下面的这些是拿来干嘛的下面的delta可能是用来bp的，直接修改*delta
+    #11-1第十一步的分支，查看一下下面这些是不是修改delta用来bp算法的
+    #11-2调用这个函数之一的是l.delta
+    #11-4调用这个函数，对应x传入的参数是l.output，l是layer类型,tx是经过变换以后的
+    #11-4-1  layer.output是数组，长度为 l.outputs
+    #11-4-2 l.outputs大小是h*w*n*(classes + coords + 1);  等于网格数*每个网格预测的矩形框数*每个矩形框的参数个数(来自github的hgpvision)
+    #11-4-3 需要知道l.output里是什么顺序，因为后面用他是隔stride调用的
+    #11-5对应调用函数的参数scale是(2-truth.w*truth.h)，搞不懂2-w*h是什么意思，猜测:2-面积
+    #11-6需要看下x[stride]是什么，需要知道里面分stride的多次操作是什么意思，知道了以后可能会知道delta是什么
+    #11-7 l.delta,l.input,l.output三个参数的大小是一样的(来自github的hgpvision)，猜测：l.delta是用来bp的
+    #11-8 继续看delta是拿来干嘛的，什么格式
     delta[index + 0*stride] = scale * (tx - x[index + 0*stride]);
     delta[index + 1*stride] = scale * (ty - x[index + 1*stride]);
     delta[index + 2*stride] = scale * (tw - x[index + 2*stride]);
@@ -189,6 +199,7 @@ void forward_yolo_layer(const layer l, network net)
                         int class_index = entry_index(l, b, n*l.w*l.h + j*l.w + i, 4 + 1);
                         delta_yolo_class(l.output, l.delta, class_index, class, l.classes, l.w*l.h, 0);
                         box truth = float_to_box(net.truth + best_t*(4 + 1) + b*l.truths, 1);
+                        #11-3里面的l.delta确认下是不是用来bp的
                         delta_yolo_box(truth, l.output, l.biases, l.mask[n], box_index, i, j, l.w, l.h, net.w, net.h, l.delta, (2-truth.w*truth.h), l.w*l.h);
                     }
                 }
@@ -221,7 +232,7 @@ void forward_yolo_layer(const layer l, network net)
                 float iou = delta_yolo_box(truth, l.output, l.biases, best_n, box_index, i, j, l.w, l.h, net.w, net.h, l.delta, (2-truth.w*truth.h), l.w*l.h);
                 #6iou在这里得出来的，函数名叫delta_yolo_box
                 #7delta_yolo_box输入参数为truth, l.output, l.biases, best_n, box_index, i, j, l.w, l.h, net.w, net.h, l.delta, (2-truth.w*truth.h), l.w*l.h
-                #8
+                #8看这个函数为什么预测的iou是正无穷，看怎么bp梯度
                 int obj_index = entry_index(l, b, mask_n*l.w*l.h + j*l.w + i, 4);
                 avg_obj += l.output[obj_index];
                 l.delta[obj_index] = 1 - l.output[obj_index];
