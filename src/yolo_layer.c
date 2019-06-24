@@ -129,6 +129,8 @@ static int entry_index(layer l, int batch, int location, int entry)
     return batch*l.outputs + n*l.w*l.h*(4+l.classes+1) + entry*l.w*l.h + loc;
 }
 
+
+#3先看一下这个函数，一次调用输出一次IOU
 void forward_yolo_layer(const layer l, network net)
 {
     int i,j,b,t,n;
@@ -217,7 +219,9 @@ void forward_yolo_layer(const layer l, network net)
             if(mask_n >= 0){
                 int box_index = entry_index(l, b, mask_n*l.w*l.h + j*l.w + i, 0);
                 float iou = delta_yolo_box(truth, l.output, l.biases, best_n, box_index, i, j, l.w, l.h, net.w, net.h, l.delta, (2-truth.w*truth.h), l.w*l.h);
-
+                #6iou在这里得出来的，函数名叫delta_yolo_box
+                #7delta_yolo_box输入参数为truth, l.output, l.biases, best_n, box_index, i, j, l.w, l.h, net.w, net.h, l.delta, (2-truth.w*truth.h), l.w*l.h
+                #8
                 int obj_index = entry_index(l, b, mask_n*l.w*l.h + j*l.w + i, 4);
                 avg_obj += l.output[obj_index];
                 l.delta[obj_index] = 1 - l.output[obj_index];
@@ -232,10 +236,14 @@ void forward_yolo_layer(const layer l, network net)
                 if(iou > .5) recall += 1;
                 if(iou > .75) recall75 += 1;
                 avg_iou += iou;
+                #4可以看出avg_iou是这里的iou之和，之所以avg_iou为NAN是因为其中有iou无限大
+                #5找一下iou在哪里得出来的
             }
         }
     }
     *(l.cost) = pow(mag_array(l.delta, l.outputs * l.batch), 2);
+    #2往上延伸，是预测的avg_iou为NAN
+    #1这里输出预测的和gt的IOU,之前训练自己的车辆数据Avg IOU一直都会变成NAN
     printf("Region %d Avg IOU: %f, Class: %f, Obj: %f, No Obj: %f, .5R: %f, .75R: %f,  count: %d\n", net.index, avg_iou/count, avg_cat/class_count, avg_obj/count, avg_anyobj/(l.w*l.h*l.n*l.batch), recall/count, recall75/count, count);
 }
 
