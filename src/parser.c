@@ -303,8 +303,10 @@ int *parse_yolo_mask(char *a, int *num)
     return mask;
 }
 
+//1这个函数用到make_yolo_layer,make_yolo_layer是定义每个yolo层，所以这个函数可能是创建yolo结构的
 layer parse_yolo(list *options, size_params params)
 {
+    //2 option_find_int 来自于option_list.c
     int classes = option_find_int(options, "classes", 20);
     int total = option_find_int(options, "num", 1);
     int num = total;
