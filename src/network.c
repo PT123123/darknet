@@ -787,7 +787,12 @@ void forward_network_gpu(network *netp)
     pull_network_output(netp);
     calc_network_cost(netp);
 }
-
+//1反向传播在这里,delta可能是gt和prediction的loss,什么格式不清楚，delta 是float *
+//2查看backward_gpu是不是bp更新权重
+//1-1查看*layer.delta_gpu内部是什么格式,大小是batch*l.outputs，是cuda_make_array函数创建的,里面会用到cudaMalloc，可能是CUDA写的
+//1-2在yolo_layer里面可以看到delta的格式是delta[index + n*stride]
+//1-2delta[index + n*stride],其中n为0,1,2,3的时候分别为xywh的delta
+//1-3看一下delta是在哪里被计算的，可以在计算的地方限制delta的大小
 void backward_network_gpu(network *netp)
 {
     int i;
