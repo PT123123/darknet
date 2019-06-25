@@ -286,6 +286,7 @@ void backward_network(network *netp)
     }
 }
 
+//1训练的主函数，前向反向传播、更新权重
 float train_network_datum(network *net)
 {
     *net->seen += net->batch;
