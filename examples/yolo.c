@@ -53,10 +53,11 @@ void train_yolo(char *cfgfile, char *weightfile)
         pthread_join(load_thread, 0);
         train = buffer;
         load_thread = load_data_in_thread(args);
-
+        //1加载数据，不确定多次循环是否会多次运行以上几行
         printf("Loaded: %lf seconds\n", sec(clock()-time));
 
         time=clock();
+        //2train_network在network.c里，训练的主函数，要看fp和bp去network.c看
         float loss = train_network(net, train);
         if (avg_loss < 0) avg_loss = loss;
         avg_loss = avg_loss*.9 + loss*.1;
