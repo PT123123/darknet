@@ -808,6 +808,11 @@ void backward_network_gpu(network *netp)
             layer prev = net.layers[i-1];
             net.input = prev.output;
             net.delta = prev.delta;
+	    //1-4delta是CUDAMALLOC出来的，要cudaMemcpy到malloc的数组内才能printf
+	    //1-5把GPU里的数组复制到CPU上，才能查看大小
+	    float* dst_pt=(float*)malloc(128*prev.outputs);//这里的128是batch_size
+	    cudaMemcpy(dst_pt,prev.delta_gpu,128*prev.outputs,cudaMemcpyHostToDevice);//这行有错，原因未知
+	    //每一layer的delta都是在cuda.c里面的cuda_make_array分配的，大小为batch*outputs
             net.input_gpu = prev.output_gpu;
             net.delta_gpu = prev.delta_gpu;
         }
