@@ -810,8 +810,15 @@ void backward_network_gpu(network *netp)
             net.delta = prev.delta;
 	    //1-4delta是CUDAMALLOC出来的，要cudaMemcpy到malloc的数组内才能printf
 	    //1-5把GPU里的数组复制到CPU上，才能查看大小
-	    float* dst_pt=(float*)malloc(netp->batch*netp->outputs);//这里的128是batch_size
-	    cudaMemcpy(dst_pt,netp->delta_gpu,netp->batch*netp->outputs,cudaMemcpyHostToDevice);//这行有错，原因未知
+	    //1-6成功把GPU里的复制出来到CPU了，
+	    float* dst_pt=(float*)calloc(prev.batch*prev.outputs);
+	    cudaMemcpy(dst_pt,prev.delta_gpu,prev.batch*prev.outputs,cudaMemcpyDeviceToHost);//将gpu里的每层的delta_gpu复制到dst_pt
+	    for(int i=0;i<(prev.batch)*(prev.outputs);i++)
+		    if(*(dst+i)>66666){
+			    printf("%f\n",*(dst+i));
+			    *(dst+i)=66666;
+			     }//1-7不是很确定这个阈值应该设置成多少
+	    cudaMemcpy(prev.delta_gpu,dst_pt,prev.batch*prev.outputs,cudaMemcpyHostToDevice);
 	    //每一layer的delta都是在cuda.c里面的cuda_make_array分配的，大小为batch*outputs
 	    //梯度更新好像是在convolutional_kernels.cu的update_convolutional_layer_gpu里，此函数的参数是layer和此层参数配置a
 	    //delta最终用在blas_kernels.cu的backward_bias_gpu中
