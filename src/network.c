@@ -823,6 +823,7 @@ void backward_network_gpu(network *netp)
 	    //梯度更新好像是在convolutional_kernels.cu的update_convolutional_layer_gpu里，此函数的参数是layer和此层参数配置a
 	    //delta最终用在blas_kernels.cu的backward_bias_gpu中
 	    //delta_gpu是cudaMalloc((void **)&x_gpu, size);这么创建的,其中size等于batch*l.outputs
+	    free(dst_pt);//NAN的问题解决
             net.input_gpu = prev.output_gpu;
             net.delta_gpu = prev.delta_gpu;
         }
